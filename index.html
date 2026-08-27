@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>Школьник — оқу қосымшасы</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, 'Segoe UI', Verdana, sans-serif; background:#FDF6E9; }
+  .text-xs{font-size:13px !important}
+  .text-sm{font-size:15.5px !important}
+  .text-base{font-size:18px !important}
+  .text-lg{font-size:20.5px !important}
+  .text-xl{font-size:23px !important}
+  .text-2xl{font-size:27px !important}
+  .text-3xl{font-size:34px !important}
+  .text-4xl{font-size:41px !important}
+  .text-5xl{font-size:55px !important}
+  .pixel-panel{ border:4px solid #1F2937; box-shadow:6px 6px 0 #1F2937; background:#fff; }
+  .pixel-btn{ border:3px solid #1F2937; box-shadow:4px 4px 0 #1F2937; transition:transform .05s ease; }
+  .pixel-btn:active{ transform:translate(4px,4px); box-shadow:0 0 0 #1F2937; }
+  .pixel-btn:disabled{ opacity:.45; box-shadow:none; cursor:not-allowed; }
+  .pixel-btn:disabled:active{ transform:none; }
+  ::-webkit-scrollbar{ width:10px; }
+  ::-webkit-scrollbar-thumb{ background:#1F2937; border-radius:0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+/* ============================================================
+   ДАННЫЕ / БАНК ЗАДАНИЙ
+   ============================================================ */
+
+const DAY_START_HOUR = 6;
+const WEEKLY_CAP = 3000;
+
+function pad(n){ return String(n).padStart(2,'0'); }
+function getAppDate(d){
+  const dt = new Date(d || Date.now());
+  if (dt.getHours() < DAY_START_HOUR) dt.setDate(dt.getDate()-1);
+  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+}
+function addDays(dateStr, n){
+  const d = new Date(dateStr+'T00:00:00');
+  d.setDate(d.getDate()+n);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function getWeekStart(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const day = d.getDay();
+  const diff = (day===0? -6 : 1-day);
+  d.setDate(d.getDate()+diff);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function daysBetween(a,b){
+  return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00'))/86400000);
+}
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function sample(arr,n){ return shuffle(arr).slice(0,n); }
+function uid(){ return Math.random().toString(36).slice(2,10); }
+
+const SUBJECT_KEYS = ['math','logic','russian','english','reading'];
+const SUBJECT_LABELS = { math:'Математика', logic:'Логика', russian:'Орыс тілі', english:'English', reading:'Оқу' };
+const SUBJECT_ICONS  = { math:'🔢', logic:'🧩', russian:'🇷🇺', english:'🇬🇧', reading:'📖' };
+const WORD_SUBJECTS = ['russian','english'];
+
+/* ---------- Математика ---------- */
+const MATH_L1 = [
+ {id:'m1_1', text:'Есепте: 2 + 3 = ?', options:['4','5','6','7'], answer:1},
+ {id:'m1_2', text:'Есепте: 5 − 2 = ?', options:['2','3','4','5'], answer:1},
+ {id:'m1_3', text:'Есепте: 4 + 4 = ?', options:['7','8','9','6'], answer:1},
+ {id:'m1_4', text:'Есепте: 9 − 3 = ?', options:['5','6','7','8'], answer:1},
+ {id:'m1_5', text:'Қайсысы үлкен?', options:['7','4'], answer:0},
+ {id:'m1_6', text:'Қайсысы кіші?', options:['3','8'], answer:0},
+ {id:'m1_7', text:'Есепте: 1 + 6 = ?', options:['6','7','8','9'], answer:1},
+ {id:'m1_8', text:'Есепте: 10 − 4 = ?', options:['5','6','7','8'], answer:1},
+ {id:'m1_9', text:'Есепте: 3 + 3 = ?', options:['5','6','7','8'], answer:1},
+ {id:'m1_10',text:'Есепте: 8 − 5 = ?', options:['2','3','4','5'], answer:1},
+ {id:'m1_11',text:'5-тен кейінгі сан қандай?', options:['4','6','7','8'], answer:1},
+ {id:'m1_12',text:'9-дан бұрынғы сан қандай?', options:['7','8','10','6'], answer:1},
+ {id:'m1_13',text:'Есепте: 2 + 7 = ?', options:['8','9','10','7'], answer:1},
+ {id:'m1_14',text:'Есепте: 6 − 6 = ?', options:['1','0','2','6'], answer:1},
+ {id:'m1_15',text:'Қайсысы көп: 6 алма ме, 9 алма ма?', options:['6 алма','9 алма'], answer:1},
+];
+const MATH_L2 = [
+ {id:'m2_1', text:'Есепте: 12 + 5 = ?', options:['15','16','17','18'], answer:2},
+ {id:'m2_2', text:'Есепте: 18 − 6 = ?', options:['10','11','12','13'], answer:2},
+ {id:'m2_3', text:'Есепте: 9 + 8 = ?', options:['15','16','17','18'], answer:2},
+ {id:'m2_4', text:'Есепте: 20 − 7 = ?', options:['11','12','13','14'], answer:2},
+ {id:'m2_5', text:'Есепте: 14 + 3 = ?', options:['15','16','17','18'], answer:2},
+ {id:'m2_6', text:'Есепте: 16 − 9 = ?', options:['5','6','7','8'], answer:2},
+ {id:'m2_7', text:'Қайсысы үлкен?', options:['15','19'], answer:1},
+ {id:'m2_8', text:'Есепте: 11 + 9 = ?', options:['18','19','20','21'], answer:2},
+ {id:'m2_9', text:'Есепте: 20 − 12 = ?', options:['6','7','8','9'], answer:2},
+ {id:'m2_10',text:'15 мен 17-нің арасындағы сан?', options:['14','16','18','19'], answer:1},
+ {id:'m2_11',text:'Есепте: 7 + 7 = ?', options:['12','13','14','15'], answer:2},
+ {id:'m2_12',text:'Есепте: 19 − 10 = ?', options:['8','9','10','11'], answer:1},
+ {id:'m2_13',text:'Есепте: 10 + 10 = ?', options:['18','19','20','21'], answer:2},
+ {id:'m2_14',text:'Жұп санды тап', options:['3','4','7','9'], answer:1},
+ {id:'m2_15',text:'Тақ санды тап', options:['8','10','12','5'], answer:3},
+];
+
+/* ---------- Логика ---------- */
+const LOGIC_L1 = [
+ {id:'l1_1', text:'Артық сөзді тап', options:['алма','банан','үстел','алмұрт'], answer:2},
+ {id:'l1_2', text:'Жалғасын тап: 1, 2, 3, 4, __', options:['5','6','7','8'], answer:0},
+ {id:'l1_3', text:'Жалғасын тап: 2, 4, 6, 8, __', options:['9','10','11','12'], answer:1},
+ {id:'l1_4', text:'Артық сөзді тап', options:['мысық','ит','қоян','орындық'], answer:3},
+ {id:'l1_5', text:'Артық затты тап', options:['дөңгелек','шаршы','үшбұрыш','алма'], answer:3},
+ {id:'l1_6', text:'Жалғасын тап: А, Ә, Б, В, __', options:['Г','Д','Е','Ж'], answer:0},
+ {id:'l1_7', text:'Артық сөзді тап', options:['қызыл','жасыл','көк','үстел'], answer:3},
+ {id:'l1_8', text:'Жалғасын тап: 10, 8, 6, 4, __', options:['3','2','1','0'], answer:1},
+ {id:'l1_9', text:'Қайсысы жануар емес?', options:['сиыр','жылқы','қалам','ешкі'], answer:2},
+ {id:'l1_10',text:'Жалғасын тап: 5, 10, 15, 20, __', options:['22','24','25','30'], answer:2},
+ {id:'l1_11',text:'Артық затты тап', options:['қасық','шанышқы','пышақ','доп'], answer:3},
+ {id:'l1_12',text:'Түн — қараңғы, күн — __', options:['жарық','суық','дәмді','биік'], answer:0},
+ {id:'l1_13',text:'Артық сөзді тап', options:['анасы','әкесі','ағасы','кітап'], answer:3},
+ {id:'l1_14',text:'Үлкен, үлкенірек, ең __', options:['үлкен','кіші','биік','жаңа'], answer:0},
+ {id:'l1_15',text:'Қарама-қарсы сөз: ыстық — __', options:['суық','қызыл','үлкен','жылдам'], answer:0},
+];
+const LOGIC_L2 = [
+ {id:'l2_1', text:'Жалғасын тап: 3, 6, 9, 12, __', options:['14','15','16','18'], answer:1},
+ {id:'l2_2', text:'Жалғасын тап: 1, 4, 7, 10, __', options:['12','13','14','11'], answer:1},
+ {id:'l2_3', text:'Құс — ұшады, балық — __', options:['жүзеді','жүгіреді','ұшады','ұйықтайды'], answer:0},
+ {id:'l2_4', text:'Артық сөзді тап', options:['қаңтар','ақпан','дүйсенбі','наурыз'], answer:2},
+ {id:'l2_5', text:'Жалғасын тап: 20, 17, 14, 11, __', options:['9','8','10','7'], answer:1},
+ {id:'l2_6', text:'Ыстық — суық, күн — __', options:['түн','жарық','аспан','жұлдыз'], answer:0},
+ {id:'l2_7', text:'Жалғасын тап: 2, 4, 8, 16, __', options:['18','20','32','24'], answer:2},
+ {id:'l2_8', text:'Артық фигураны тап', options:['шаршы','тіктөртбұрыш','текше','үшбұрыш'], answer:2},
+ {id:'l2_9', text:'Мұғалім — мектеп, дәрігер — __', options:['ауырады','аурухана','ем','дәрі'], answer:1},
+ {id:'l2_10',text:'Жалғасын тап: Дүйсенбі, Сейсенбі, Сәрсенбі, __', options:['Бейсенбі','Жексенбі','Сенбі','Жұма'], answer:0},
+ {id:'l2_11',text:'Артық сөзді тап', options:['көлік','велосипед','ұшақ','орындық'], answer:3},
+ {id:'l2_12',text:'Жалғасын тап: 100, 90, 80, 70, __', options:['50','60','65','75'], answer:1},
+ {id:'l2_13',text:'Аю — орманда, балық — __', options:['суда','ауада','жерде','аспанда'], answer:0},
+ {id:'l2_14',text:'Есепте: 2 + 4 = ? (жұп сан)', options:['5','6','7','8'], answer:1},
+ {id:'l2_15',text:'Артық мезгілді тап', options:['көктем','жаз','түс','күз'], answer:2},
+];
+
+/* ---------- Сөздер: орыс/ағылшын ---------- */
+const RUSSIAN_L1 = [
+ {id:'ru1_1', word:'яблоко', emoji:'🍎', kz:'алма'},
+ {id:'ru1_2', word:'кот', emoji:'🐱', kz:'мысық'},
+ {id:'ru1_3', word:'дом', emoji:'🏠', kz:'үй'},
+ {id:'ru1_4', word:'вода', emoji:'💧', kz:'су'},
+ {id:'ru1_5', word:'солнце', emoji:'☀️', kz:'күн'},
+ {id:'ru1_6', word:'книга', emoji:'📚', kz:'кітап'},
+ {id:'ru1_7', word:'мама', emoji:'👩', kz:'ана'},
+ {id:'ru1_8', word:'папа', emoji:'👨', kz:'әке'},
+ {id:'ru1_9', word:'хлеб', emoji:'🍞', kz:'нан'},
+ {id:'ru1_10',word:'собака', emoji:'🐶', kz:'ит'},
+ {id:'ru1_11',word:'рыба', emoji:'🐟', kz:'балық'},
+ {id:'ru1_12',word:'дерево', emoji:'🌳', kz:'ағаш'},
+ {id:'ru1_13',word:'машина', emoji:'🚗', kz:'көлік'},
+ {id:'ru1_14',word:'звезда', emoji:'⭐', kz:'жұлдыз'},
+ {id:'ru1_15',word:'цветок', emoji:'🌸', kz:'гүл'},
+];
+const RUSSIAN_L2 = [
+ {id:'ru2_1', word:'школа', emoji:'🏫', kz:'мектеп'},
+ {id:'ru2_2', word:'учитель', emoji:'🧑‍🏫', kz:'мұғалім'},
+ {id:'ru2_3', word:'зима', emoji:'❄️', kz:'қыс'},
+ {id:'ru2_4', word:'лето', emoji:'🏖️', kz:'жаз'},
+ {id:'ru2_5', word:'быстро', emoji:'⚡', kz:'жылдам'},
+ {id:'ru2_6', word:'медленно', emoji:'🐢', kz:'баяу'},
+ {id:'ru2_7', word:'читать', emoji:'📖', kz:'оқу'},
+ {id:'ru2_8', word:'писать', emoji:'✍️', kz:'жазу'},
+ {id:'ru2_9', word:'играть', emoji:'🎮', kz:'ойнау'},
+ {id:'ru2_10',word:'бежать', emoji:'🏃', kz:'жүгіру'},
+ {id:'ru2_11',word:'большой', emoji:'🐘', kz:'үлкен'},
+ {id:'ru2_12',word:'маленький', emoji:'🐭', kz:'кіші'},
+ {id:'ru2_13',word:'радость', emoji:'😊', kz:'қуаныш'},
+ {id:'ru2_14',word:'дружба', emoji:'🤝', kz:'достық'},
+ {id:'ru2_15',word:'семья', emoji:'👨‍👩‍👧‍👦', kz:'отбасы'},
+];
+const ENGLISH_L1 = [
+ {id:'en1_1', word:'apple', emoji:'🍎', kz:'алма'},
+ {id:'en1_2', word:'cat', emoji:'🐱', kz:'мысық'},
+ {id:'en1_3', word:'dog', emoji:'🐶', kz:'ит'},
+ {id:'en1_4', word:'sun', emoji:'☀️', kz:'күн'},
+ {id:'en1_5', word:'book', emoji:'📚', kz:'кітап'},
+ {id:'en1_6', word:'house', emoji:'🏠', kz:'үй'},
+ {id:'en1_7', word:'water', emoji:'💧', kz:'су'},
+ {id:'en1_8', word:'mother', emoji:'👩', kz:'ана'},
+ {id:'en1_9', word:'father', emoji:'👨', kz:'әке'},
+ {id:'en1_10',word:'fish', emoji:'🐟', kz:'балық'},
+ {id:'en1_11',word:'tree', emoji:'🌳', kz:'ағаш'},
+ {id:'en1_12',word:'car', emoji:'🚗', kz:'көлік'},
+ {id:'en1_13',word:'star', emoji:'⭐', kz:'жұлдыз'},
+ {id:'en1_14',word:'flower', emoji:'🌸', kz:'гүл'},
+ {id:'en1_15',word:'bread', emoji:'🍞', kz:'нан'},
+];
+const ENGLISH_L2 = [
+ {id:'en2_1', word:'school', emoji:'🏫', kz:'мектеп'},
+ {id:'en2_2', word:'teacher', emoji:'🧑‍🏫', kz:'мұғалім'},
+ {id:'en2_3', word:'winter', emoji:'❄️', kz:'қыс'},
+ {id:'en2_4', word:'summer', emoji:'🏖️', kz:'жаз'},
+ {id:'en2_5', word:'fast', emoji:'⚡', kz:'жылдам'},
+ {id:'en2_6', word:'slow', emoji:'🐢', kz:'баяу'},
+ {id:'en2_7', word:'read', emoji:'📖', kz:'оқу'},
+ {id:'en2_8', word:'write', emoji:'✍️', kz:'жазу'},
+ {id:'en2_9', word:'play', emoji:'🎮', kz:'ойнау'},
+ {id:'en2_10',word:'run', emoji:'🏃', kz:'жүгіру'},
+ {id:'en2_11',word:'big', emoji:'🐘', kz:'үлкен'},
+ {id:'en2_12',word:'small', emoji:'🐭', kz:'кіші'},
+ {id:'en2_13',word:'happy', emoji:'😊', kz:'қуанышты'},
+ {id:'en2_14',word:'friend', emoji:'🤝', kz:'дос'},
+ {id:'en2_15',word:'family', emoji:'👨‍👩‍👧‍👦', kz:'отбасы'},
+];
+
+/* ---------- Чтение: тексты + вопросы (каждый вопрос — отдельный элемент) ---------- */
+const READING_STORIES_L1 = [
+ { id:'rs1', lang:'ru', title:'Кот и мышка', text:'У Пети есть кот. Кота зовут Рыжик. Рыжик любит спать на диване. Однажды Рыжик увидел мышку. Мышка быстро убежала.' },
+ { id:'rs2', lang:'ru', title:'Осень', text:'Наступила осень. Листья на деревьях стали жёлтыми. Дует холодный ветер. Птицы улетают в тёплые края. Скоро пойдёт дождь.' },
+ { id:'rs3', lang:'ru', title:'Помощник', text:'Максим помог маме на кухне. Он помыл посуду. Потом вытер стол. Мама сказала ему спасибо. Максим был рад помочь.' },
+ { id:'ks1', lang:'kz', title:'Күшік пен доп', text:'Айгүлдің үй жануары бар. Оның аты Ақбар. Ақбар допты жақсы көреді. Бір күні доп бақшаға домалап кетті. Ақбар допты тауып алды.' },
+ { id:'ks2', lang:'kz', title:'Мектепке дайындық', text:'Ертең Айдана мектепке барады. Ол рюкзагін жинады. Дәптерлер мен қаламдарды салды. Анасы оған жаңа көйлек сатып алды. Айдана қуанышты.' },
+];
+const READING_QUESTIONS_L1 = [
+ {id:'rq1_1', storyId:'rs1', text:'Как зовут кота?', options:['Рыжик','Барсик','Мурзик','Васька'], answer:0},
+ {id:'rq1_2', storyId:'rs1', text:'Где любит спать кот?', options:['На диване','На кухне','В саду','На дереве'], answer:0},
+ {id:'rq1_3', storyId:'rs1', text:'Кого увидел кот?', options:['Мышку','Собаку','Птицу','Рыбку'], answer:0},
+ {id:'rq2_1', storyId:'rs2', text:'Какое время года наступило?', options:['Осень','Зима','Весна','Лето'], answer:0},
+ {id:'rq2_2', storyId:'rs2', text:'Какого цвета стали листья?', options:['Жёлтые','Зелёные','Синие','Красные'], answer:0},
+ {id:'rq2_3', storyId:'rs2', text:'Куда улетают птицы?', options:['В тёплые края','В лес','На реку','В горы'], answer:0},
+ {id:'rq3_1', storyId:'rs3', text:'Кто помог маме?', options:['Максим','Петя','Ваня','Дима'], answer:0},
+ {id:'rq3_2', storyId:'rs3', text:'Что помыл Максим?', options:['Посуду','Пол','Окна','Машину'], answer:0},
+ {id:'rq3_3', storyId:'rs3', text:'Что сказала мама?', options:['Спасибо','Привет','Пока','Извини'], answer:0},
+ {id:'kq1_1', storyId:'ks1', text:'Күшіктің аты кім?', options:['Ақбар','Барсик','Шарик','Дружок'], answer:0},
+ {id:'kq1_2', storyId:'ks1', text:'Күшік нені жақсы көреді?', options:['Допты','Кітапты','Суды','Ойыншықты'], answer:0},
+ {id:'kq1_3', storyId:'ks1', text:'Доп қайда домалап кетті?', options:['Бақшаға','Үйге','Мектепке','Дүкенге'], answer:0},
+ {id:'kq2_1', storyId:'ks2', text:'Айдана қайда барады?', options:['Мектепке','Дүкенге','Паркке','Ауылға'], answer:0},
+ {id:'kq2_2', storyId:'ks2', text:'Ол не жинады?', options:['Рюкзакті','Ойыншықты','Ыдысты','Гүлді'], answer:0},
+ {id:'kq2_3', storyId:'ks2', text:'Айдананың көңіл-күйі қандай?', options:['Қуанышты','Ашулы','Қорқынышты','Мұңды'], answer:0},
+];
+const READING_STORIES_L2 = [
+ { id:'rs4', lang:'ru', title:'Зимние каникулы', text:'Наступили зимние каникулы. Дети катаются на санках с горки. Выпало много белого снега. Вечером семья лепит снеговика во дворе. Все радуются зиме.' },
+ { id:'rs5', lang:'ru', title:'Поход в лес', text:'В субботу семья пошла в лес. Папа взял с собой корзину. В лесу они собирали грибы и ягоды. Мама увидела красивую белку. Все вернулись домой уставшие, но довольные.' },
+ { id:'rs6', lang:'ru', title:'Библиотека', text:'Соня очень любит читать книги. Каждую неделю она ходит в библиотеку. Библиотекарь помогает ей выбрать интересную книгу. Дома Соня читает перед сном. Её любимая книга — про космос.' },
+ { id:'ks3', lang:'kz', title:'Наурыз мейрамы', text:'Наурыз — көктемгі үлкен мереке. Бұл күні адамдар наурыз көже пісіреді. Балалар ұлттық киім киеді. Ауылда концерт өтеді. Барлығы бір-бірін құттықтайды.' },
+ { id:'ks4', lang:'kz', title:'Ғарышкер болу арманы', text:'Асан ғарышкер болғысы келеді. Ол әр түні жұлдыздарды бақылайды. Кітапханадан ғарыш туралы кітаптар алады. Мұғалімі оны мақтайды. Асан көп оқиды және жақсы оқиды.' },
+];
+const READING_QUESTIONS_L2 = [
+ {id:'rq4_1', storyId:'rs4', text:'Какое время года описано?', options:['Зима','Лето','Осень','Весна'], answer:0},
+ {id:'rq4_2', storyId:'rs4', text:'На чём катаются дети?', options:['На санках','На велосипеде','На коньках','На лыжах'], answer:0},
+ {id:'rq4_3', storyId:'rs4', text:'Кого лепит семья?', options:['Снеговика','Дом','Машину','Куклу'], answer:0},
+ {id:'rq5_1', storyId:'rs5', text:'Когда семья пошла в лес?', options:['В субботу','В понедельник','В пятницу','В воскресенье'], answer:0},
+ {id:'rq5_2', storyId:'rs5', text:'Что собирала семья?', options:['Грибы и ягоды','Цветы','Камни','Листья'], answer:0},
+ {id:'rq5_3', storyId:'rs5', text:'Кого увидела мама?', options:['Белку','Волка','Лису','Медведя'], answer:0},
+ {id:'rq6_1', storyId:'rs6', text:'Куда ходит Соня?', options:['В библиотеку','В школу','В магазин','В парк'], answer:0},
+ {id:'rq6_2', storyId:'rs6', text:'Кто помогает выбрать книгу?', options:['Библиотекарь','Учитель','Мама','Сестра'], answer:0},
+ {id:'rq6_3', storyId:'rs6', text:'Про что любимая книга Сони?', options:['Про космос','Про животных','Про машины','Про спорт'], answer:0},
+ {id:'kq3_1', storyId:'ks3', text:'Наурыз қандай мезгілде тойланады?', options:['Көктемде','Қыста','Жазда','Күзде'], answer:0},
+ {id:'kq3_2', storyId:'ks3', text:'Осы күні не пісіреді?', options:['Наурыз көже','Плов','Бауырсақ','Шай'], answer:0},
+ {id:'kq3_3', storyId:'ks3', text:'Балалар не киеді?', options:['Ұлттық киім','Спорт киімін','Пижама','Пальто'], answer:0},
+ {id:'kq4_1', storyId:'ks4', text:'Асан кім болғысы келеді?', options:['Ғарышкер','Дәрігер','Мұғалім','Жүргізуші'], answer:0},
+ {id:'kq4_2', storyId:'ks4', text:'Ол түнде нені бақылайды?', options:['Жұлдыздарды','Құстарды','Көлікті','Ағашты'], answer:0},
+ {id:'kq4_3', storyId:'ks4', text:'Асан қандай оқушы?', options:['Жақсы оқитын','Жалқау','Ұрыс','Ұйқышыл'], answer:0},
+];
+const ALL_STORIES = {};
+[...READING_STORIES_L1, ...READING_STORIES_L2].forEach(s=>{ ALL_STORIES[s.id]=s; });
+
+function bankFor(subject, level){
+  if(subject==='math') return level===1?MATH_L1:MATH_L2;
+  if(subject==='logic') return level===1?LOGIC_L1:LOGIC_L2;
+  if(subject==='russian') return level===1?RUSSIAN_L1:RUSSIAN_L2;
+  if(subject==='english') return level===1?ENGLISH_L1:ENGLISH_L2;
+  if(subject==='reading') return level===1?READING_QUESTIONS_L1:READING_QUESTIONS_L2;
+  return [];
+}
+
+/* ---------- Любопытные факты ---------- */
+const FACTS = {
+  football:[
+    {id:'f_fb1', emoji:'⚽', text:'Әлем чемпионатын ең көп жеңген ел — Бразилия. Ол 5 рет чемпион атанды.'},
+    {id:'f_fb2', emoji:'🏆', text:'Лионель Месси 2022 жылы Аргентинамен бірге әлем чемпионы атанды.'},
+    {id:'f_fb3', emoji:'🎩', text:'Хет-трик — бір ойында бір ойыншының 3 гол соғуы деген сөз.'},
+    {id:'f_fb4', emoji:'👟', text:'Криштиану Роналду — футбол тарихындағы ең көп гол соққан ойыншылардың бірі.'},
+    {id:'f_fb5', emoji:'🇰🇿', text:'Қазақстанның ең танымал футбол клубтарының бірі — Алматының «Кайраты».'},
+    {id:'f_fb6', emoji:'💨', text:'Футбол тарихындағы ең жылдам голдар ойын басталғаннан бірнеше секунд өткен соң соғылған.'},
+    {id:'f_fb7', emoji:'⏱️', text:'Футбол ойыны 2 таймнан тұрады, әр тайм 45 минутқа созылады.'},
+    {id:'f_fb8', emoji:'👑', text:'Пеле — Бразилияның атақты футболшысы, 3 рет әлем чемпионы атанды.'},
+    {id:'f_fb9', emoji:'📅', text:'Әлем чемпионаты 4 жылда бір рет өткізіледі.'},
+    {id:'f_fb10',emoji:'👥', text:'Футбол алаңында бір командада 11 ойыншы болады.'},
+  ],
+  countries:[
+    {id:'f_c1', emoji:'🇰🇿', text:'Қазақстан — әлемдегі теңізге тікелей шықпайтын ең үлкен ел.'},
+    {id:'f_c2', emoji:'🏙️', text:'Астана — Қазақстанның астанасы.'},
+    {id:'f_c3', emoji:'🇷🇺', text:'Ресейдің астанасы — Мәскеу қаласы.'},
+    {id:'f_c4', emoji:'🇨🇳', text:'Қытай — халық саны бойынша әлемдегі ең үлкен елдердің бірі.'},
+    {id:'f_c5', emoji:'🏜️', text:'Египетте үлкен пирамидалар бар, оларды ежелгі мысырлықтар салған.'},
+    {id:'f_c6', emoji:'🇯🇵', text:'Жапония — Азияда орналасқан арал ел.'},
+    {id:'f_c7', emoji:'🗼', text:'Франция астанасы — Париж, онда атақты Эйфель мұнарасы бар.'},
+    {id:'f_c8', emoji:'🇦🇺', text:'Австралия — сонымен қатар материк те, ел де болатын жалғыз жер.'},
+    {id:'f_c9', emoji:'👨‍👩‍👧', text:'Қазақстанда 19 миллионнан астам адам тұрады.'},
+    {id:'f_c10',emoji:'🇺🇸', text:'АҚШ-тың астанасы — Вашингтон қаласы.'},
+  ],
+  history:[
+    {id:'f_h1', emoji:'🐫', text:'Ұлы Жібек жолы Қазақстан жерінен де өткен.'},
+    {id:'f_h2', emoji:'✒️', text:'Абай Құнанбаев — қазақтың ұлы ақыны және ойшылы.'},
+    {id:'f_h3', emoji:'🏛️', text:'Ежелгі мысырлықтар пирамидаларды билеушілерге арнап салған.'},
+    {id:'f_h4', emoji:'🇰🇿', text:'Қазақстан 1991 жылы тәуелсіздігін алды.'},
+    {id:'f_h5', emoji:'🏰', text:'Ежелгі Рим империясы өте үлкен және қуатты болған.'},
+    {id:'f_h6', emoji:'🎻', text:'Қорқыт ата — қазақ халқының ежелгі данышпаны әрі күйшісі.'},
+    {id:'f_h7', emoji:'🌾', text:'«Ұлы Дала» — қазақ халқының тарихи атауы.'},
+    {id:'f_h8', emoji:'📜', text:'Ежелгі қытайлықтар қағазды алғашқылардың бірі болып ойлап тапты.'},
+    {id:'f_h9', emoji:'🌱', text:'Наурыз мейрамы — көктемнің басталуын білдіретін ежелгі мереке.'},
+    {id:'f_h10',emoji:'👳', text:'Абылай хан — қазақ хандығының атақты билеушісі болған.'},
+  ],
+};
+const FACT_CATS = ['football','countries','history'];
+const FACT_CAT_LABEL = { football:'Футбол', countries:'Елдер', history:'Тарих' };
+function allFactsFlat(){
+  return FACT_CATS.flatMap(c=>FACTS[c].map(f=>({...f, category:c})));
+}
+function findFact(id){ return allFactsFlat().find(f=>f.id===id); }
+
+/* ---------- Дела по дому: стартовый набор ---------- */
+const DEFAULT_CHORES = [
+ {id:'c1', name:'Төсекті жинау', icon:'🛏️', days:[0,1,2,3,4,5,6]},
+ {id:'c2', name:'Тісті тазалау (таңертең)', icon:'🪥', days:[0,1,2,3,4,5,6]},
+ {id:'c3', name:'Тісті тазалау (кешке)', icon:'🪥', days:[0,1,2,3,4,5,6]},
+ {id:'c4', name:'Ойыншықтарды жинау', icon:'🧸', days:[0,1,2,3,4,5,6]},
+ {id:'c5', name:'Мектепке тамақ дайындау', icon:'🍱', days:[1,2,3,4,5]},
+ {id:'c6', name:'Рюкзак пен заттарды жинау', icon:'🎒', days:[0,1,2,3,4]},
+];
+const WEEKDAY_LABELS = ['Жс','Дс','Сс','Ср','Бс','Жм','Сб'];
+
+/* ============================================================
+   ЛЕЙТНЕР: подбор и обновление
+   ============================================================ */
+function nextIntervalForBox(box){
+  const map = {1:2, 2:4, 3:7, 4:14, 5:14};
+  return map[box] || 14;
+}
+function updateBoxOnAnswer(rec, correct, today){
+  const r = rec ? {...rec} : {box:0, correctCount:0, wrongCount:0, lastShown:null, nextDue:null};
+  r.lastShown = today;
+  if(correct){
+    r.correctCount = (r.correctCount||0)+1;
+    r.box = Math.min(5, (r.box||0)+1);
+    r.nextDue = addDays(today, nextIntervalForBox(r.box));
+  } else {
+    r.wrongCount = (r.wrongCount||0)+1;
+    r.box = 1;
+    r.nextDue = addDays(today, 1);
+  }
+  return r;
+}
+function pickDaily(pool, boxes, today, count){
+  const overdue=[], fresh=[], notDue=[];
+  pool.forEach(item=>{
+    const rec = boxes[item.id];
+    if(!rec){ fresh.push(item); }
+    else if(!rec.nextDue || rec.nextDue<=today){ overdue.push({item,rec}); }
+    else { notDue.push({item,rec}); }
+  });
+  overdue.sort((a,b)=> (a.rec.nextDue||'').localeCompare(b.rec.nextDue||''));
+  notDue.sort((a,b)=> (a.rec.nextDue||'').localeCompare(b.rec.nextDue||''));
+  let selected = overdue.map(o=>o.item);
+  if(selected.length<count) selected = selected.concat(shuffle(fresh).slice(0, count-selected.length));
+  if(selected.length<count) selected = selected.concat(notDue.slice(0, count-selected.length).map(o=>o.item));
+  if(selected.length<count && pool.length>0){
+    let i=0;
+    while(selected.length<count){ selected.push(pool[i % pool.length]); i++; }
+  }
+  return selected.slice(0, count);
+}
+
+/* ============================================================
+   ДЕНЬГИ
+   ============================================================ */
+function ensureWeek(pd, today){
+  const ws = getWeekStart(today);
+  if(pd.money.weekStart !== ws){
+    pd.money.weekStart = ws;
+    pd.money.weekTotal = 0;
+  }
+}
+function awardMoney(pd, today, amount){
+  if(amount<=0) return 0;
+  ensureWeek(pd, today);
+  const remaining = WEEKLY_CAP - pd.money.weekTotal;
+  const actual = Math.max(0, Math.min(amount, remaining));
+  pd.money.weekTotal += actual;
+  pd.money.piggyTotal += actual;
+  return actual;
+}
+
+/* ============================================================
+   ХРАНИЛИЩЕ ПРОФИЛЕЙ
+   ============================================================ */
+const PROFILES_KEY = 'skolnik_profiles_v1';
+const PASSWORD_KEY = 'skolnik_parent_password_v1';
+function loadProfiles(){
+  try{ return JSON.parse(localStorage.getItem(PROFILES_KEY)) || []; }catch(e){ return []; }
+}
+function saveProfiles(list){ localStorage.setItem(PROFILES_KEY, JSON.stringify(list)); }
+function dataKey(id){ return `skolnik_data_v1_${id}`; }
+function defaultSubjectState(){
+  return { level:1, boxes:{}, history:[], lastDoneDate:null,
+    sessionQuestions:null, sessionIndex:0, sessionCorrect:0, sessionStage:'quiz' };
+}
+function defaultProfileData(){
+  const subjects={};
+  SUBJECT_KEYS.forEach(k=> subjects[k]=defaultSubjectState());
+  return {
+    subjects,
+    homework:{},
+    chores: DEFAULT_CHORES.map(c=>({...c})),
+    choreStatus:{},
+    money:{weekStart:null, weekTotal:0, piggyTotal:0, dayBonusGiven:{}},
+    facts:{readIds:[], lastQuizDate:null, factsDate:null, order:[], index:0},
+  };
+}
+function loadProfileData(id){
+  try{
+    const raw = localStorage.getItem(dataKey(id));
+    if(!raw) return defaultProfileData();
+    const parsed = JSON.parse(raw);
+    const base = defaultProfileData();
+    SUBJECT_KEYS.forEach(k=>{ if(!parsed.subjects[k]) parsed.subjects[k]=defaultSubjectState(); });
+    return {...base, ...parsed, subjects:{...base.subjects, ...parsed.subjects}};
+  }catch(e){ return defaultProfileData(); }
+}
+function saveProfileData(id, pd){ localStorage.setItem(dataKey(id), JSON.stringify(pd)); }
+
+const AVATAR_CHOICES = ['🦊','🐼','🐯','🐰','🦁','🐨','🐸','🦉','🐵','🐱'];
+
+/* ============================================================
+   МЕЛКИЕ UI-КОМПОНЕНТЫ
+   ============================================================ */
+function PixelBtn({children, onClick, disabled, className, color}){
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`pixel-btn px-4 py-2 font-bold ${color || 'bg-yellow-300'} ${className||''}`}
+    >{children}</button>
+  );
+}
+
+const HERO_GRID = [
+ [0,0,2,2,2,2,0,0],
+ [0,2,1,1,1,1,2,0],
+ [2,1,3,1,1,3,1,2],
+ [2,1,1,1,1,1,1,2],
+ [2,1,4,4,4,4,1,2],
+ [0,2,1,1,1,1,2,0],
+ [0,0,2,0,0,2,0,0],
+ [0,2,2,0,0,2,2,0],
+];
+const HERO_COLORS = {0:'transparent',1:'#5EEAD4',2:'#1F2937',3:'#22D3EE',4:'#FB923C'};
+function PixelHero({size}){
+  const px = size || 10;
+  return (
+    <div style={{lineHeight:0}}>
+      {HERO_GRID.map((row,ri)=>(
+        <div key={ri} style={{display:'flex'}}>
+          {row.map((c,ci)=>(
+            <div key={ci} style={{width:px,height:px,background:HERO_COLORS[c]}}/>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function speak(text, lang){
+  if(!window.speechSynthesis) return;
+  try{
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang || 'en-US';
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* ============================================================
+   ЭКРАН: ВЫБОР ПРОФИЛЯ
+   ============================================================ */
+function ProfileSelect({profiles, onSelect, onCreate, onOpenParent}){
+  const [creating, setCreating] = React.useState(false);
+  const [name, setName] = React.useState('');
+  const [avatar, setAvatar] = React.useState(AVATAR_CHOICES[0]);
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 gap-6">
+      <div className="flex items-center gap-3">
+        <PixelHero size={8}/>
+        <h1 className="text-3xl font-black text-gray-800">Школьник</h1>
+      </div>
+      <p className="text-base text-gray-600">Профильді таңда</p>
+      <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+        {profiles.map(p=>(
+          <button key={p.id} onClick={()=>onSelect(p.id)}
+            className="pixel-panel flex flex-col items-center gap-1 p-4 bg-white">
+            <span className="text-4xl">{p.avatar}</span>
+            <span className="text-base font-bold text-gray-800">{p.name}</span>
+          </button>
+        ))}
+        <button onClick={()=>setCreating(true)}
+          className="pixel-panel flex flex-col items-center justify-center gap-1 p-4 bg-lime-100">
+          <span className="text-3xl">➕</span>
+          <span className="text-sm font-bold text-gray-700">Жаңа профиль</span>
+        </button>
+      </div>
+
+      {creating && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="pixel-panel bg-white p-5 w-full max-w-sm flex flex-col gap-3">
+            <h2 className="text-xl font-bold">Жаңа профиль</h2>
+            <input value={name} onChange={e=>setName(e.target.value)}
+              placeholder="Баланың аты" maxLength={20}
+              className="pixel-btn shadow-none px-3 py-2 text-base"/>
+            <div className="flex flex-wrap gap-2">
+              {AVATAR_CHOICES.map(a=>(
+                <button key={a} onClick={()=>setAvatar(a)}
+                  className={`text-2xl p-1 border-2 ${avatar===a?'border-gray-800 bg-yellow-100':'border-transparent'}`}>{a}</button>
+              ))}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <PixelBtn color="bg-gray-200" onClick={()=>setCreating(false)}>Бас тарту</PixelBtn>
+              <PixelBtn color="bg-lime-300" onClick={()=>{
+                if(!name.trim()) return;
+                onCreate(name.trim(), avatar);
+                setName(''); setCreating(false);
+              }}>Құру</PixelBtn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button onClick={onOpenParent} className="text-sm text-gray-500 underline mt-4">Ата-ана кабинеті</button>
+    </div>
+  );
+}
+
+/* ============================================================
+   ГЛАВНЫЙ ЭКРАН РЕБЁНКА
+   ============================================================ */
+function Home({profile, pd, today, onOpenSubject, onOpenFacts, onOpenPiggy, onOpenParent, onSwitchProfile, onOpenHomework, onOpenChores}){
+  const hwStatus = (pd.homework[today]||{}).status;
+  const choresToday = pd.chores.filter(c=> c.days.includes(new Date(today+'T12:00:00').getDay()) );
+  const choresDoneCount = choresToday.filter(c=>{
+    const st = (pd.choreStatus[today]||{})[c.id];
+    return st && st.confirm==='yes';
+  }).length;
+
+  return (
+    <div className="min-h-screen p-4 pb-10 max-w-lg mx-auto flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-3xl">{profile.avatar}</span>
+          <div>
+            <div className="text-lg font-black text-gray-800">Сәлем, {profile.name}!</div>
+            <div className="text-xs text-gray-500">{today}</div>
+          </div>
+        </div>
+        <PixelHero size={6}/>
+      </div>
+
+      <div className="pixel-panel bg-white p-3 flex items-center justify-between">
+        <div className="text-sm font-bold text-gray-700">💰 Осы аптада: {pd.money.weekTotal||0} / {WEEKLY_CAP} ₸</div>
+        <PixelBtn color="bg-pink-200" onClick={onOpenPiggy}>Копилка</PixelBtn>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        {SUBJECT_KEYS.map(key=>{
+          const s = pd.subjects[key];
+          const doneToday = s.lastDoneDate === today;
+          const inProgress = !doneToday && s.sessionQuestions;
+          return (
+            <button key={key} disabled={doneToday}
+              onClick={()=>onOpenSubject(key)}
+              className={`pixel-panel p-4 flex items-center justify-between ${doneToday?'bg-gray-200':'bg-white'}`}>
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">{SUBJECT_ICONS[key]}</span>
+                <div className="text-left">
+                  <div className="text-lg font-bold text-gray-800">{SUBJECT_LABELS[key]}</div>
+                  <div className="text-xs text-gray-500">Деңгей {s.level}</div>
+                </div>
+              </div>
+              <div className="text-sm font-bold">
+                {doneToday? '✅ Ертеңге дейін' : inProgress? '▶ Жалғастыру' : 'Бастау'}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <button onClick={onOpenHomework} className="pixel-panel bg-white p-3 flex flex-col items-center gap-1">
+          <span className="text-2xl">📝</span>
+          <span className="text-sm font-bold">Үй тапсырмасы</span>
+          <span className="text-xs text-gray-500">
+            {hwStatus==='confirmed'?'Расталды ✅': hwStatus==='done_wait'?'Күтуде...': hwStatus==='not_assigned'?'Берілмеген': hwStatus==='rejected'?'Қайта белгіле': 'Белгілеу'}
+          </span>
+        </button>
+        <button onClick={onOpenChores} className="pixel-panel bg-white p-3 flex flex-col items-center gap-1">
+          <span className="text-2xl">🧹</span>
+          <span className="text-sm font-bold">Үй шаруасы</span>
+          <span className="text-xs text-gray-500">{choresDoneCount}/{choresToday.length} дайын</span>
+        </button>
+      </div>
+
+      <button onClick={onOpenFacts} className="pixel-panel bg-indigo-50 p-3 flex items-center gap-3">
+        <span className="text-2xl">💡</span>
+        <span className="text-base font-bold text-gray-800">Қызық факт (міндетті емес)</span>
+      </button>
+
+      <div className="flex gap-2 justify-center mt-2">
+        <button onClick={onSwitchProfile} className="text-xs text-gray-500 underline">Профильді ауыстыру</button>
+        <button onClick={onOpenParent} className="text-xs text-gray-500 underline">Ата-ана кабинеті</button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   ПРОХОЖДЕНИЕ ПРЕДМЕТА (учёба)
+   ============================================================ */
+function SubjectFlow({subjectKey, pd, setPd, today, onFinish, onExit}){
+  const s = pd.subjects[subjectKey];
+  const isWordSubject = WORD_SUBJECTS.includes(subjectKey);
+  const bank = bankFor(subjectKey, s.level);
+
+  // Инициализация сессии, если её ещё нет
+  React.useEffect(()=>{
+    if(!s.sessionQuestions){
+      const picked = pickDaily(bank, s.boxes, today, 10);
+      setPd(prev=>{
+        const next = JSON.parse(JSON.stringify(prev));
+        next.subjects[subjectKey].sessionQuestions = picked.map(q=>q.id);
+        next.subjects[subjectKey].sessionIndex = 0;
+        next.subjects[subjectKey].sessionCorrect = 0;
+        next.subjects[subjectKey].sessionStage = isWordSubject ? 'learn' : 'quiz';
+        return next;
+      });
+    }
+    // eslint-disable-next-line
+  }, []);
+
+  React.useEffect(()=>{
+    if(!s.sessionQuestions && pd._lastResult){
+      onFinish(pd._lastResult);
+    }
+    // eslint-disable-next-line
+  }, [s.sessionQuestions]);
+
+  if(!s.sessionQuestions){
+    return <div className="min-h-screen flex items-center justify-center"><div className="text-lg">Жүктелуде...</div></div>;
+  }
+
+  const items = s.sessionQuestions.map(id => bank.find(b=>b.id===id)).filter(Boolean);
+  const idx = s.sessionIndex;
+
+  function commitAnswer(correct){
+    setPd(prev=>{
+      const next = JSON.parse(JSON.stringify(prev));
+      const ns = next.subjects[subjectKey];
+      const qid = ns.sessionQuestions[idx];
+      ns.boxes[qid] = updateBoxOnAnswer(ns.boxes[qid], correct, today);
+      ns.sessionCorrect += correct ? 1 : 0;
+      ns.sessionIndex += 1;
+      if(ns.sessionIndex >= ns.sessionQuestions.length){
+        finalizeSession(next);
+      }
+      return next;
+    });
+  }
+
+  function finalizeSession(next){
+    const ns = next.subjects[subjectKey];
+    const correct = ns.sessionCorrect;
+    ns.lastDoneDate = today;
+    ns.history = ns.history || [];
+    ns.history.push({date: today, pct: correct*10});
+    ns.sessionQuestions = null;
+    ns.sessionIndex = 0;
+
+    let earned = correct*6 + (correct===10 ? 15 : 0);
+    const got = awardMoney(next, today, earned);
+
+    // Проверка разблокировки уровня 2
+    let leveledUp = false;
+    if(ns.level === 1){
+      const last3 = ns.history.slice(-3);
+      if(last3.length===3 && last3.every(h=>h.pct>=80)){
+        ns.level = 2;
+        leveledUp = true;
+      }
+    }
+
+    // Бонус за прохождение всех 5 предметов сегодня
+    const allDone = SUBJECT_KEYS.every(k => next.subjects[k].lastDoneDate === today);
+    if(allDone && !(next.money.dayBonusGiven||{})[today]){
+      const bonusGot = awardMoney(next, today, 35);
+      next.money.dayBonusGiven = next.money.dayBonusGiven || {};
+      next.money.dayBonusGiven[today] = true;
+      next._lastAllBonus = bonusGot;
+    }
+    next._lastResult = {correct, earned: got, leveledUp};
+  }
+
+  const currentItem = items[idx];
+
+  if(isWordSubject){
+    if(s.sessionStage === 'learn'){
+      return (
+        <WordLearnCard
+          item={currentItem}
+          index={idx}
+          total={items.length}
+          isEnglish={subjectKey==='english'}
+          onNext={()=>{
+            if(idx+1 < items.length){
+              setPd(prev=>{
+                const next = JSON.parse(JSON.stringify(prev));
+                next.subjects[subjectKey].sessionIndex = idx+1;
+                return next;
+              });
+            } else {
+              setPd(prev=>{
+                const next = JSON.parse(JSON.stringify(prev));
+                next.subjects[subjectKey].sessionStage = 'check';
+                next.subjects[subjectKey].sessionIndex = 0;
+                return next;
+              });
+            }
+          }}
+          onExit={onExit}
+        />
+      );
+    }
+    // check stage
+    const distractPool = bank.filter(b=>b.id!==currentItem.id);
+    const distractors = sample(distractPool, Math.min(3, distractPool.length));
+    const optionsRaw = shuffle([currentItem, ...distractors]);
+    return (
+      <WordCheckCard
+        item={currentItem}
+        options={optionsRaw}
+        index={idx}
+        total={items.length}
+        isEnglish={subjectKey==='english'}
+        onAnswer={(chosenId)=> commitAnswer(chosenId===currentItem.id)}
+        onExit={onExit}
+      />
+    );
+  }
+
+  if(subjectKey==='reading'){
+    const story = ALL_STORIES[currentItem.storyId];
+    return (
+      <ReadingCard
+        story={story}
+        question={currentItem}
+        index={idx}
+        total={items.length}
+        onAnswer={(chosenIdx)=> commitAnswer(chosenIdx===currentItem.answer)}
+        onExit={onExit}
+      />
+    );
+  }
+
+  return (
+    <QuizCard
+      question={currentItem}
+      index={idx}
+      total={items.length}
+      onAnswer={(chosenIdx)=> commitAnswer(chosenIdx===currentItem.answer)}
+      onExit={onExit}
+    />
+  );
+}
+
+function TopBar({index, total, onExit, label}){
+  return (
+    <div className="flex items-center justify-between mb-4">
+      <button onClick={onExit} className="text-sm text-gray-500 underline">← Шығу</button>
+      <div className="text-sm font-bold text-gray-600">{label} {index+1}/{total}</div>
+    </div>
+  );
+}
+
+function WordLearnCard({item, index, total, isEnglish, onNext, onExit}){
+  return (
+    <div className="min-h-screen p-4 max-w-lg mx-auto flex flex-col">
+      <TopBar index={index} total={total} onExit={onExit} label="Үйрену"/>
+      <div className="pixel-panel bg-white flex-1 flex flex-col items-center justify-center gap-4 p-6">
+        <div className="text-6xl">{item.emoji}</div>
+        <div className="flex items-center gap-2">
+          <div className="text-3xl font-black text-gray-800">{item.word}</div>
+          {isEnglish && (
+            <button onClick={()=>speak(item.word,'en-US')} className="text-2xl">🔊</button>
+          )}
+        </div>
+        <div className="text-xl text-gray-500">{item.kz}</div>
+      </div>
+      <PixelBtn color="bg-lime-300" className="mt-4 w-full" onClick={onNext}>
+        {index+1<total ? 'Келесі →' : 'Тексеруге өту →'}
+      </PixelBtn>
+    </div>
+  );
+}
+
+function WordCheckCard({item, options, index, total, isEnglish, onAnswer, onExit}){
+  const [picked, setPicked] = React.useState(null);
+  React.useEffect(()=>{ setPicked(null); }, [item.id]);
+  return (
+    <div className="min-h-screen p-4 max-w-lg mx-auto flex flex-col">
+      <TopBar index={index} total={total} onExit={onExit} label="Тексеру"/>
+      <div className="pixel-panel bg-white p-6 flex flex-col items-center gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <div className="text-4xl font-black text-gray-800">{item.word}</div>
+          {isEnglish && <button onClick={()=>speak(item.word,'en-US')} className="text-2xl">🔊</button>}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {options.map(opt=>{
+          const state = picked===null ? '' : (opt.id===item.id ? 'bg-lime-300' : (opt.id===picked ? 'bg-red-200' : 'opacity-50'));
+          return (
+            <button key={opt.id} disabled={picked!==null}
+              onClick={()=>{ setPicked(opt.id); setTimeout(()=>onAnswer(opt.id), 700); }}
+              className={`pixel-panel p-4 flex flex-col items-center gap-1 bg-white ${state}`}>
+              <span className="text-3xl">{opt.emoji}</span>
+              <span className="text-base font-bold text-gray-800">{opt.kz}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function QuizCard({question, index, total, onAnswer, onExit}){
+  const [picked, setPicked] = React.useState(null);
+  React.useEffect(()=>{ setPicked(null); }, [question.id]);
+  return (
+    <div className="min-h-screen p-4 max-w-lg mx-auto flex flex-col">
+      <TopBar index={index} total={total} onExit={onExit} label="Сұрақ"/>
+      <div className="pixel-panel bg-white p-6 mb-4">
+        <div className="text-xl font-bold text-gray-800 text-center">{question.text}</div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {question.options.map((opt,i)=>{
+          const state = picked===null ? '' : (i===question.answer ? 'bg-lime-300' : (i===picked ? 'bg-red-200' : 'opacity-50'));
+          return (
+            <button key={i} disabled={picked!==null}
+              onClick={()=>{ setPicked(i); setTimeout(()=>onAnswer(i), 700); }}
+              className={`pixel-panel p-4 bg-white text-lg font-bold text-gray-800 ${state}`}>{opt}</button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ReadingCard({story, question, index, total, onAnswer, onExit}){
+  const [picked, setPicked] = React.useState(null);
+  React.useEffect(()=>{ setPicked(null); }, [question.id]);
+  return (
+    <div className="min-h-screen p-4 max-w-lg mx-auto flex flex-col">
+      <TopBar index={index} total={total} onExit={onExit} label="Мәтін"/>
+      <div className="pixel-panel bg-amber-50 p-4 mb-3">
+        <div className="text-sm font-bold text-gray-500 mb-1">{story.title} · {story.lang==='ru'?'орысша':'қазақша'}</div>
+        <div className="text-lg text-gray-800">{story.text}</div>
+      </div>
+      <div className="pixel-panel bg-white p-4 mb-3">
+        <div className="text-lg font-bold text-gray-800 text-center">{question.text}</div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {question.options.map((opt,i)=>{
+          const state = picked===null ? '' : (i===question.answer ? 'bg-lime-300' : (i===picked ? 'bg-red-200' : 'opacity-50'));
+          return (
+            <button key={i} disabled={picked!==null}
+              onClick={()=>{ setPicked(i); setTimeout(()=>onAnswer(i), 700); }}
+              className={`pixel-panel p-3 bg-white text-base font-bold text-gray-800 ${state}`}>{opt}</button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ResultScreen({result, onDone}){
+  if(!result) return null;
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="pixel-panel bg-white p-6 max-w-sm w-full flex flex-col items-center gap-3 text-center">
+        <div className="text-5xl">{result.correct===10?'🏆':result.correct>=7?'🎉':'💪'}</div>
+        <div className="text-2xl font-black text-gray-800">{result.correct} / 10 дұрыс</div>
+        <div className="text-lg text-gray-600">+{result.earned} ₸ тапты!</div>
+        {result.leveledUp && (
+          <div className="pixel-panel bg-yellow-200 p-3 text-base font-bold">🎊 Құттықтаймыз! 2-деңгей ашылды!</div>
+        )}
+        <PixelBtn color="bg-lime-300" className="w-full" onClick={onDone}>Жарайды</PixelBtn>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   ДОМАШНЕЕ ЗАДАНИЕ
+   ============================================================ */
+function HomeworkScreen({pd, setPd, today, onExit}){
+  const status = (pd.homework[today]||{}).status || 'none';
+  function setStatus(v){
+    setPd(prev=>{
+      const next = JSON.parse(JSON.stringify(prev));
+      next.homework[today] = { status: v };
+      return next;
+    });
+  }
+  return (
+    <div className="min-h-screen p-4 max-w-lg mx-auto flex flex-col gap-4">
+      <TopBar index={0} total={1} onExit={onExit} label=""/>
+      <div className="pixel-panel bg-white p-6 flex flex-col items-center gap-4 text-center">
+        <div className="text-5xl">📝</div>
+        <div className="text-xl font-bold text-gray-800">Бүгінгі үй тапсырмасы</div>
+        {status==='none' && (
+          <div className="flex gap-3 w-full">
+            <PixelBtn color="bg-lime-300" className="flex-1" onClick={()=>setStatus('done_wait')}>Сделано ✅</PixelBtn>
+            <PixelBtn color="bg-gray-200" className="flex-1" onClick={()=>setStatus('not_assigned')}>Не задали</PixelBtn>
+          </div>
+        )}
+        {status==='done_wait' && <div className="text-lg text-yellow-700 font-bold">⏳ Ата-ана растауын күтуде...</div>}
+        {status==='confirmed' && <div className="text-lg text-green-700 font-bold">✅ Расталды! 75 ₸ алдың.</div>}
+        {status==='rejected' && (
+          <div className="flex flex-col items-center gap-2">
+            <div className="text-base text-red-600 font-bold">❌ Ата-ана растамады</div>
+            <PixelBtn color="bg-lime-300" onClick={()=>setStatus('done_wait')}>Қайта белгілеу</PixelBtn>
+          </div>
+        )}
+        {status==='not_assigned' && <div className="text-base text-gray-500">Бүгін тапсырма жоқ деп белгіледің.</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   ДЕЛА ПО ДОМУ (для ребёнка)
+   ============================================================ */
+function ChoresScreen({pd, setPd, today, onExit}){
+  const weekday = new Date(today+'T12:00:00').getDay();
+  const list = pd.chores.filter(c=>c.days.includes(weekday));
+  function markDone(choreId){
+    setPd(prev=>{
+      const next = JSON.parse(JSON.stringify(prev));
+      next.choreStatus[today] = next.choreStatus[today] || {};
+      next.choreStatus[today][choreId] = { done:true, confirm:'wait' };
+      return next;
+    });
+  }
+  return (
+    <div className="min-h-screen p-4 max-w-lg mx-auto flex flex-col gap-3">
+      <TopBar index={0} total={1} onExit={onExit} label=""/>
+      <div className="text-xl font-bold text-gray-800 text-center mb-2">🧹 Бүгінгі үй шаруасы</div>
+      {list.map(c=>{
+        const st = (pd.choreStatus[today]||{})[c.id];
+        return (
+          <div key={c.id} className="pixel-panel bg-white p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{c.icon}</span>
+              <span className="text-base font-bold text-gray-800">{c.name}</span>
+            </div>
+            {!st && <PixelBtn color="bg-lime-300" onClick={()=>markDone(c.id)}>Дайын</PixelBtn>}
+            {st && st.confirm==='wait' && <span className="text-sm text-yellow-700 font-bold">⏳ Күтуде</span>}
+            {st && st.confirm==='yes' && <span className="text-sm text-green-700 font-bold">✅ +15 ₸</span>}
+            {st && st.confirm==='no' && <PixelBtn color="bg-gray-200" onClick={()=>markDone(c.id)}>Қайта белгілеу</PixelBtn>}
+          </div>
+        );
+      })}
+      {list.length===0 && <div className="text-center text-gray-500">Бүгін дела жоқ.</div>}
+    </div>
+  );
+}
+
+/* ============================================================
+   КОПИЛКА
+   ============================================================ */
+function PiggyBank({pd, today, onExit}){
+  const pct = Math.min(100, Math.round((pd.money.weekTotal||0)/WEEKLY_CAP*100));
+  return (
+    <div className="min-h-screen p-4 max-w-lg mx-auto flex flex-col gap-4">
+      <TopBar index={0} total={1} onExit={onExit} label=""/>
+      <div className="pixel-panel bg-white p-6 flex flex-col items-center gap-4 text-center">
+        <div className="text-5xl">🐷</div>
+        <div className="text-3xl font-black text-gray-800">{pd.money.piggyTotal||0} ₸</div>
+        <div className="text-base text-gray-500">Жиналған копилка</div>
+        <div className="w-full">
+          <div className="text-sm text-gray-600 mb-1">Осы апта: {pd.money.weekTotal||0} / {WEEKLY_CAP} ₸</div>
+          <div className="w-full h-5 border-2 border-gray-800 bg-gray-100">
+            <div className="h-full bg-lime-400" style={{width:pct+'%'}}></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   ЛЮБОПЫТНЫЙ ФАКТ
+   ============================================================ */
+function ensureTodaysFacts(pd, today){
+  if(pd.facts.factsDate === today && pd.facts.order && pd.facts.order.length===6) return pd;
+  const picks = [];
+  FACT_CATS.forEach(cat=>{
+    picks.push(...sample(FACTS[cat], 2).map(f=>f.id));
+  });
+  pd.facts.order = shuffle(picks);
+  pd.facts.index = 0;
+  pd.facts.factsDate = today;
+  return pd;
+}
+
+function FactsSection({pd, setPd, today, onExit, onOpenQuiz}){
+  React.useEffect(()=>{
+    setPd(prev=>{
+      const next = JSON.parse(JSON.stringify(prev));
+      ensureTodaysFacts(next, today);
+      return next;
+    });
+    // eslint-disable-next-line
+  }, []);
+
+  const order = pd.facts.order || [];
+  const index = pd.facts.index || 0;
+  if(order.length < 6){
+    return <div className="min-h-screen flex items-center justify-center"><div>Жүктелуде...</div></div>;
+  }
+  const factId = order[index];
+  const fact = findFact(factId);
+  const isLast = index >= order.length-1;
+
+  const readCount = (pd.facts.readIds||[]).length;
+  const canQuiz = readCount>=3 && (!pd.facts.lastQuizDate || daysBetween(pd.facts.lastQuizDate, today)>=7);
+
+  function next(){
+    setPd(prev=>{
+      const next = JSON.parse(JSON.stringify(prev));
+      const rid = next.facts.order[next.facts.index];
+      if(!next.facts.readIds.includes(rid)) next.facts.readIds.push(rid);
+      if(next.facts.index >= next.facts.order.length-1){
+        next.facts.order = shuffle(next.facts.order);
+        next.facts.index = 0;
+      } else {
+        next.facts.index += 1;
+      }
+      return next;
+    });
+  }
+
+  return (
+    <div className="min-h-screen p-4 max-w-lg mx-auto flex flex-col gap-4">
+      <TopBar index={index} total={6} onExit={onExit} label="Факт"/>
+      <div className="pixel-panel bg-indigo-50 p-6 flex flex-col items-center gap-3 text-center flex-1">
+        <div className="text-5xl">{fact.emoji}</div>
+        <div className="text-sm font-bold text-gray-500">{FACT_CAT_LABEL[fact.category]}</div>
+        <div className="text-lg text-gray-800">{fact.text}</div>
+      </div>
+      <PixelBtn color="bg-lime-300" className="w-full" onClick={next}>
+        {isLast ? 'Заново →' : 'Ещё факт →'}
+      </PixelBtn>
+      {canQuiz && (
+        <PixelBtn color="bg-yellow-300" className="w-full" onClick={onOpenQuiz}>🎯 Викторина!</PixelBtn>
+      )}
+    </div>
+  );
+}
+
+function FactsQuiz({pd, setPd, today, onExit}){
+  const readIds = pd.facts.readIds || [];
+  const [questions] = React.useState(()=>{
+    const chosen = sample(readIds, Math.min(5, readIds.length));
+    return chosen.map(id=>{
+      const correct = findFact(id);
+      const sameCat = FACTS[correct.category].filter(f=>f.id!==id);
+      const distractors = sample(sameCat, Math.min(2, sameCat.length));
+      const opts = shuffle([correct, ...distractors].map(f=>f.text));
+      return { emoji: correct.emoji, category: correct.category, correctText: correct.text, options: opts };
+    });
+  });
+  const [idx, setIdx] = React.useState(0);
+  const [score, setScore] = React.useState(0);
+  const [picked, setPicked] = React.useState(null);
+  const [done, setDone] = React.useState(false);
+
+  function answer(opt){
+    setPicked(opt);
+    const correct = opt === questions[idx].correctText;
+    setTimeout(()=>{
+      setScore(s=> s + (correct?1:0));
+      if(idx+1 < questions.length){ setIdx(idx+1); setPicked(null); }
+      else {
+        setDone(true);
+        setPd(prev=>{
+          const next = JSON.parse(JSON.stringify(prev));
+          next.facts.lastQuizDate = today;
+          return next;
+        });
+      }
+    }, 700);
+  }
+
+  if(questions.length===0){
+    return <div className="min-h-screen flex items-center justify-center"><div>Факт жеткіліксіз.</div></div>;
+  }
+
+  if(done){
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="pixel-panel bg-white p-6 max-w-sm w-full flex flex-col items-center gap-3 text-center">
+          <div className="text-5xl">🎯</div>
+          <div className="text-2xl font-black text-gray-800">{score} / {questions.length}</div>
+          <PixelBtn color="bg-lime-300" className="w-full" onClick={onExit}>Жарайды</PixelBtn>
+        </div>
+      </div>
+    );
+  }
+
+  const q = questions[idx];
+  return (
+    <div className="min-h-screen p-4 max-w-lg mx-auto flex flex-col gap-4">
+      <TopBar index={idx} total={questions.length} onExit={onExit} label="Викторина"/>
+      <div className="pixel-panel bg-white p-6 text-center">
+        <div className="text-4xl mb-2">{q.emoji}</div>
+        <div className="text-base text-gray-500">{FACT_CAT_LABEL[q.category]} туралы қай факт дұрыс?</div>
+      </div>
+      <div className="flex flex-col gap-3">
+        {q.options.map((opt,i)=>{
+          const state = picked===null ? '' : (opt===q.correctText ? 'bg-lime-300' : (opt===picked ? 'bg-red-200' : 'opacity-50'));
+          return (
+            <button key={i} disabled={picked!==null} onClick={()=>answer(opt)}
+              className={`pixel-panel p-3 bg-white text-left text-sm font-bold text-gray-800 ${state}`}>{opt}</button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   КАБИНЕТ РОДИТЕЛЯ
+   ============================================================ */
+function getParentPassword(){ return localStorage.getItem(PASSWORD_KEY); }
+function setParentPassword(p){ localStorage.setItem(PASSWORD_KEY, p); }
+
+function last14Dates(today){
+  const arr=[];
+  for(let i=13;i>=0;i--) arr.push(addDays(today, -i));
+  return arr;
+}
+function activityColor(pct){
+  if(pct===null || pct===undefined) return '#E5E7EB';
+  if(pct>=80) return '#4ADE80';
+  if(pct>=50) return '#FDE047';
+  return '#FB923C';
+}
+function avgPct(history){
+  if(!history || history.length===0) return 0;
+  return Math.round(history.reduce((a,h)=>a+h.pct,0)/history.length);
+}
+
+function ParentCabinet({profiles, today, onExit, onDataChanged}){
+  const stored = getParentPassword();
+  const [unlocked, setUnlocked] = React.useState(false);
+  const [pw1, setPw1] = React.useState('');
+  const [pw2, setPw2] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [selectedId, setSelectedId] = React.useState(profiles[0] ? profiles[0].id : null);
+  const [childPd, setChildPd] = React.useState(selectedId ? loadProfileData(selectedId) : null);
+  const [showChangePw, setShowChangePw] = React.useState(false);
+  const [choreEditing, setChoreEditing] = React.useState(null);
+  const [choreForm, setChoreForm] = React.useState({name:'', icon:'⭐', days:[0,1,2,3,4,5,6]});
+
+  React.useEffect(()=>{
+    if(selectedId) setChildPd(loadProfileData(selectedId));
+  }, [selectedId]);
+
+  function persist(mutator){
+    setChildPd(prev=>{
+      const next = JSON.parse(JSON.stringify(prev));
+      mutator(next);
+      saveProfileData(selectedId, next);
+      onDataChanged();
+      return next;
+    });
+  }
+
+  if(!profiles.length){
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 gap-4">
+        <div className="text-lg">Алдымен балаға профиль жасаңыз.</div>
+        <PixelBtn onClick={onExit}>Артқа</PixelBtn>
+      </div>
+    );
+  }
+
+  if(!unlocked){
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="pixel-panel bg-white p-6 max-w-sm w-full flex flex-col gap-3">
+          <div className="text-xl font-bold text-center">🔒 Ата-ана кабинеті</div>
+          {!stored && (
+            <>
+              <div className="text-sm text-gray-600">Алғаш рет кіру: құпия сөз жасаңыз (кемінде 4 таңба)</div>
+              <input type="password" value={pw1} onChange={e=>setPw1(e.target.value)} placeholder="Құпия сөз"
+                className="pixel-btn shadow-none px-3 py-2 text-base"/>
+              <input type="password" value={pw2} onChange={e=>setPw2(e.target.value)} placeholder="Қайталаңыз"
+                className="pixel-btn shadow-none px-3 py-2 text-base"/>
+              {error && <div className="text-sm text-red-600">{error}</div>}
+              <PixelBtn color="bg-lime-300" onClick={()=>{
+                if(pw1.length<4){ setError('Кемінде 4 таңба керек'); return; }
+                if(pw1!==pw2){ setError('Сәйкес келмейді'); return; }
+                setParentPassword(pw1); setUnlocked(true); setError('');
+              }}>Құру</PixelBtn>
+            </>
+          )}
+          {stored && (
+            <>
+              <input type="password" value={pw1} onChange={e=>setPw1(e.target.value)} placeholder="Құпия сөз"
+                className="pixel-btn shadow-none px-3 py-2 text-base"/>
+              {error && <div className="text-sm text-red-600">{error}</div>}
+              <PixelBtn color="bg-lime-300" onClick={()=>{
+                if(pw1===stored){ setUnlocked(true); setError(''); } else { setError('Қате құпия сөз'); }
+              }}>Кіру</PixelBtn>
+            </>
+          )}
+          <button onClick={onExit} className="text-sm text-gray-500 underline mt-2">Артқа</button>
+        </div>
+      </div>
+    );
+  }
+
+  if(!childPd) return null;
+
+  const weekday = new Date(today+'T12:00:00').getDay();
+  const hwToday = (childPd.homework[today]||{}).status;
+  const choresToday = childPd.chores.filter(c=>c.days.includes(weekday));
+  const pendingChores = choresToday.filter(c=>{
+    const st = (childPd.choreStatus[today]||{})[c.id];
+    return st && st.confirm==='wait';
+  });
+
+  const days14 = last14Dates(today);
+
+  return (
+    <div className="min-h-screen p-4 max-w-lg mx-auto flex flex-col gap-4 pb-16">
+      <TopBar index={0} total={1} onExit={onExit} label=""/>
+      <div className="text-xl font-black text-gray-800">👪 Ата-ана кабинеті</div>
+
+      <select value={selectedId} onChange={e=>setSelectedId(e.target.value)}
+        className="pixel-btn shadow-none px-3 py-2 text-base">
+        {profiles.map(p=> <option key={p.id} value={p.id}>{p.avatar} {p.name}</option>)}
+      </select>
+
+      <div className="pixel-panel bg-white p-3 grid grid-cols-3 gap-2 text-center">
+        <div><div className="text-2xl">⭐</div><div className="text-sm font-bold">{SUBJECT_KEYS.reduce((a,k)=>a+Object.values(childPd.subjects[k].boxes).reduce((x,b)=>x+(b.correctCount||0),0),0)}</div></div>
+        <div><div className="text-2xl">📅</div><div className="text-sm font-bold">{SUBJECT_KEYS.reduce((a,k)=>a+childPd.subjects[k].history.length,0)}</div></div>
+        <div><div className="text-2xl">🐷</div><div className="text-sm font-bold">{childPd.money.piggyTotal||0} ₸</div></div>
+      </div>
+
+      {(hwToday==='done_wait' || pendingChores.length>0) && (
+        <div className="pixel-panel bg-yellow-50 p-3">
+          <div className="text-base font-bold mb-2">⏳ Растауды күтуде</div>
+          {hwToday==='done_wait' && (
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm">📝 Үй тапсырмасы</span>
+              <div className="flex gap-2">
+                <button onClick={()=>persist(n=>{ n.homework[today]={status:'confirmed'}; awardMoney(n,today,75); })} className="pixel-btn px-2 py-1 bg-lime-300">✅</button>
+                <button onClick={()=>persist(n=>{ n.homework[today]={status:'rejected'}; })} className="pixel-btn px-2 py-1 bg-red-200">❌</button>
+              </div>
+            </div>
+          )}
+          {pendingChores.map(c=>(
+            <div key={c.id} className="flex items-center justify-between mb-2">
+              <span className="text-sm">{c.icon} {c.name}</span>
+              <div className="flex gap-2">
+                <button onClick={()=>persist(n=>{ n.choreStatus[today][c.id].confirm='yes'; awardMoney(n,today,15); })} className="pixel-btn px-2 py-1 bg-lime-300">✅</button>
+                <button onClick={()=>persist(n=>{ n.choreStatus[today][c.id].confirm='no'; })} className="pixel-btn px-2 py-1 bg-red-200">❌</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="pixel-panel bg-white p-3">
+        <div className="text-base font-bold mb-2">📊 Дәлдік (жалпы)</div>
+        {SUBJECT_KEYS.map(k=>{
+          const a = avgPct(childPd.subjects[k].history);
+          return (
+            <div key={k} className="mb-2">
+              <div className="text-xs text-gray-600 flex justify-between"><span>{SUBJECT_ICONS[k]} {SUBJECT_LABELS[k]} (Д{childPd.subjects[k].level})</span><span>{a}%</span></div>
+              <div className="w-full h-3 bg-gray-100 border border-gray-800">
+                <div className="h-full bg-indigo-400" style={{width:a+'%'}}></div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="pixel-panel bg-white p-3">
+        <div className="text-base font-bold mb-2">🗓️ Соңғы 14 күн</div>
+        {SUBJECT_KEYS.map(k=>{
+          const hist = childPd.subjects[k].history;
+          return (
+            <div key={k} className="mb-2">
+              <div className="text-xs text-gray-600 mb-1">{SUBJECT_ICONS[k]} {SUBJECT_LABELS[k]}</div>
+              <div className="flex gap-1">
+                {days14.map(d=>{
+                  const entry = hist.find(h=>h.date===d);
+                  return <div key={d} title={d} style={{width:14,height:14,background:activityColor(entry?entry.pct:null)}}/>;
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="pixel-panel bg-white p-3">
+        <div className="text-base font-bold mb-1">💰 Ақша ережесі</div>
+        <div className="text-xs text-gray-600 leading-relaxed">
+          Дұрыс жауап — 6 ₸, 10/10 болса +15 ₸ бонус. 5 пәннің барлығы бір күнде — +35 ₸. Үй тапсырмасы (расталған) — 75 ₸. Әр үй шаруасы (расталған) — 15 ₸. Аптасына жиынтық барлығы — <b>{WEEKLY_CAP} ₸-ден аспайды</b>.
+        </div>
+        <div className="text-sm font-bold mt-2">Осы апта: {childPd.money.weekTotal||0} / {WEEKLY_CAP} ₸</div>
+        <PixelBtn color="bg-pink-200" className="mt-2 w-full" onClick={()=>{
+          if(window.confirm('Ақша нақты берілді ме? Копилка нөлденеді.')){
+            persist(n=>{ n.money.piggyTotal = 0; });
+          }
+        }}>Выплатить и обнулить копилку</PixelBtn>
+      </div>
+
+      <div className="pixel-panel bg-white p-3">
+        <div className="text-base font-bold mb-2">🧹 Үй шаруасы тізімі</div>
+        {childPd.chores.map(c=>(
+          <div key={c.id} className="flex items-center justify-between mb-2 border-b pb-1">
+            <div className="text-sm">{c.icon} {c.name} <span className="text-xs text-gray-400">({c.days.map(d=>WEEKDAY_LABELS[d]).join(',')})</span></div>
+            <div className="flex gap-1">
+              <button className="text-sm" onClick={()=>{ setChoreEditing(c.id); setChoreForm({name:c.name, icon:c.icon, days:c.days}); }}>✏️</button>
+              <button className="text-sm" onClick={()=>persist(n=>{ n.chores = n.chores.filter(x=>x.id!==c.id); })}>🗑️</button>
+            </div>
+          </div>
+        ))}
+
+        <div className="mt-3 flex flex-col gap-2">
+          <div className="text-sm font-bold">{choreEditing ? 'Дела өзгерту' : 'Жаңа дело қосу'}</div>
+          <div className="flex gap-2">
+            <input value={choreForm.icon} onChange={e=>setChoreForm({...choreForm, icon:e.target.value})}
+              className="pixel-btn shadow-none px-2 py-1 w-16 text-center" maxLength={2}/>
+            <input value={choreForm.name} onChange={e=>setChoreForm({...choreForm, name:e.target.value})}
+              placeholder="Атауы" className="pixel-btn shadow-none px-2 py-1 flex-1"/>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {WEEKDAY_LABELS.map((lbl,i)=>(
+              <button key={i} onClick={()=>{
+                const has = choreForm.days.includes(i);
+                setChoreForm({...choreForm, days: has ? choreForm.days.filter(d=>d!==i) : [...choreForm.days,i]});
+              }} className={`px-2 py-1 text-xs border-2 ${choreForm.days.includes(i)?'bg-lime-300 border-gray-800':'border-gray-300'}`}>{lbl}</button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {choreEditing && <PixelBtn color="bg-gray-200" onClick={()=>{ setChoreEditing(null); setChoreForm({name:'',icon:'⭐',days:[0,1,2,3,4,5,6]}); }}>Бас тарту</PixelBtn>}
+            <PixelBtn color="bg-lime-300" className="flex-1" onClick={()=>{
+              if(!choreForm.name.trim()) return;
+              persist(n=>{
+                if(choreEditing){
+                  const idx = n.chores.findIndex(x=>x.id===choreEditing);
+                  if(idx>=0) n.chores[idx] = {id:choreEditing, name:choreForm.name.trim(), icon:choreForm.icon, days:choreForm.days};
+                } else {
+                  n.chores.push({id:uid(), name:choreForm.name.trim(), icon:choreForm.icon, days:choreForm.days});
+                }
+              });
+              setChoreEditing(null);
+              setChoreForm({name:'', icon:'⭐', days:[0,1,2,3,4,5,6]});
+            }}>{choreEditing ? 'Сақтау' : 'Қосу'}</PixelBtn>
+          </div>
+        </div>
+      </div>
+
+      <div className="pixel-panel bg-white p-3">
+        <button onClick={()=>setShowChangePw(!showChangePw)} className="text-base font-bold">🔑 Құпия сөзді өзгерту</button>
+        {showChangePw && (
+          <div className="flex flex-col gap-2 mt-2">
+            <input type="password" placeholder="Жаңа құпия сөз" id="newpw"
+              onChange={e=>setPw1(e.target.value)} className="pixel-btn shadow-none px-3 py-2"/>
+            <PixelBtn color="bg-lime-300" onClick={()=>{
+              if(pw1.length<4) return;
+              setParentPassword(pw1); setShowChangePw(false); setPw1('');
+            }}>Сақтау</PixelBtn>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   ГЛАВНОЕ ПРИЛОЖЕНИЕ
+   ============================================================ */
+function App(){
+  const [profiles, setProfiles] = React.useState(loadProfiles());
+  const [activeId, setActiveId] = React.useState(null);
+  const [pd, setPd] = React.useState(null);
+  const [view, setView] = React.useState('home');
+  const [activeSubject, setActiveSubject] = React.useState(null);
+  const [result, setResult] = React.useState(null);
+  const [today, setToday] = React.useState(getAppDate());
+
+  React.useEffect(()=>{
+    const t = setInterval(()=> setToday(getAppDate()), 60000);
+    return ()=> clearInterval(t);
+  }, []);
+
+  React.useEffect(()=>{
+    if(activeId && pd){ saveProfileData(activeId, pd); }
+  }, [pd, activeId]);
+
+  function selectProfile(id){
+    setActiveId(id);
+    setPd(loadProfileData(id));
+    setView('home');
+  }
+  function createProfile(name, avatar){
+    const p = { id: uid(), name, avatar };
+    const list = [...profiles, p];
+    setProfiles(list);
+    saveProfiles(list);
+    selectProfile(p.id);
+  }
+  function switchProfile(){
+    setActiveId(null); setPd(null); setView('home');
+  }
+  function openSubject(key){ setActiveSubject(key); setView('subject'); }
+  function onSubjectFinish(res){
+    setResult(res);
+    setPd(prev=>{
+      const next = JSON.parse(JSON.stringify(prev));
+      delete next._lastResult;
+      return next;
+    });
+    setView('result');
+  }
+  function reloadPd(){
+    if(activeId) setPd(loadProfileData(activeId));
+  }
+
+  if(!activeId){
+    return (
+      <ProfileSelect
+        profiles={profiles}
+        onSelect={selectProfile}
+        onCreate={createProfile}
+        onOpenParent={()=>setView('parentFromSelect')}
+      />
+    );
+  }
+
+  if(view==='parentFromSelect'){
+    return <ParentCabinet profiles={profiles} today={today}
+      onExit={()=>setView('home')}
+      onDataChanged={()=>{}}
+    />;
+  }
+
+  if(!pd) return null;
+
+  if(view==='parent'){
+    return <ParentCabinet profiles={profiles} today={today}
+      onExit={()=>{ reloadPd(); setView('home'); }}
+      onDataChanged={()=>{}}
+    />;
+  }
+
+  if(view==='subject' && activeSubject){
+    return <SubjectFlow subjectKey={activeSubject} pd={pd} setPd={setPd} today={today}
+      onFinish={onSubjectFinish}
+      onExit={()=>{
+        setPd(prev=>{
+          const next = JSON.parse(JSON.stringify(prev));
+          return next;
+        });
+        setView('home');
+      }}
+    />;
+  }
+
+  if(view==='result'){
+    return <ResultScreen result={result} onDone={()=>{ setResult(null); setView('home'); }}/>;
+  }
+
+  if(view==='homework'){
+    return <HomeworkScreen pd={pd} setPd={setPd} today={today} onExit={()=>setView('home')}/>;
+  }
+  if(view==='chores'){
+    return <ChoresScreen pd={pd} setPd={setPd} today={today} onExit={()=>setView('home')}/>;
+  }
+  if(view==='piggy'){
+    return <PiggyBank pd={pd} today={today} onExit={()=>setView('home')}/>;
+  }
+  if(view==='facts'){
+    return <FactsSection pd={pd} setPd={setPd} today={today}
+      onExit={()=>setView('home')}
+      onOpenQuiz={()=>setView('factsQuiz')}
+    />;
+  }
+  if(view==='factsQuiz'){
+    return <FactsQuiz pd={pd} setPd={setPd} today={today} onExit={()=>setView('facts')}/>;
+  }
+
+  const profile = profiles.find(p=>p.id===activeId);
+  return (
+    <Home
+      profile={profile}
+      pd={pd}
+      today={today}
+      onOpenSubject={openSubject}
+      onOpenFacts={()=>setView('facts')}
+      onOpenPiggy={()=>setView('piggy')}
+      onOpenParent={()=>setView('parent')}
+      onSwitchProfile={switchProfile}
+      onOpenHomework={()=>setView('homework')}
+      onOpenChores={()=>setView('chores')}
+    />
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
+</body>
+</html>
